@@ -3,12 +3,14 @@
 # Default values
 DEFAULT_GIT_REF="main"
 DEFAULT_MAX_LINES=10000
+DEFAULT_SUMMARY_PATH="$(pwd)/repo_summary.txt"  # Default path in the current directory
 
 # Usage message
 usage() {
-    echo "Usage: $0 <repository-url> [git-reference] [max-lines]"
+    echo "Usage: $0 <repository-url> [git-reference] [max-lines] [summary-path]"
     echo "  git-reference defaults to 'main' if not provided"
     echo "  max-lines defaults to 10000 if not provided"
+    echo "  summary-path defaults to the current working directory if not provided"
     exit 1
 }
 
@@ -21,6 +23,7 @@ fi
 REPO_URL=$1
 GIT_REF=${2:-$DEFAULT_GIT_REF}
 MAX_LINES=${3:-$DEFAULT_MAX_LINES}
+SUMMARY_PATH=${4:-$DEFAULT_SUMMARY_PATH}
 
 # Create a temporary directory
 TMP_DIR=$(mktemp -d)
@@ -53,23 +56,17 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Define the summary file path outside the temporary directory
-SUMMARY_FILE="repo_summary.txt"
-
-# Create the repo_summary.txt
-touch "$SUMMARY_FILE"
+# Create the repo_summary.txt at the specified summary path
+touch "$SUMMARY_PATH"
 
 # Find all UTF-8 text files with lines up to the specified maximum and summarize them
 find . -type f -exec file --mime {} \; | grep 'utf-8' | cut -d: -f1 | while read -r file; do
     LINE_COUNT=$(wc -l < "$file")
     if [ "$LINE_COUNT" -le "$MAX_LINES" ]; then
-        echo "# $file" >> "$SUMMARY_FILE"
-        awk '{ printf "%d|%s\n", NR, $0 }' "$file" >> "$SUMMARY_FILE"
+        echo "# $file" >> "$SUMMARY_PATH"
+        awk '{ printf "%d|%s\n", NR, $0 }' "$file" >> "$SUMMARY_PATH"
     fi
 done
 
-# Move the summary file to the current working directory (outside of tmp)
-mv "$SUMMARY_FILE" "$(pwd)/$SUMMARY_FILE"
-
 # Output the path to the summary file
-echo "Summary file created at: $(pwd)/$SUMMARY_FILE"
+echo "Summary file created at: $SUMMARY_PATH"
