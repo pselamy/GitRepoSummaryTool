@@ -56,15 +56,19 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Create the repo_summary.txt at the specified summary path
+# Prepare the summary file
 touch "$SUMMARY_PATH"
+
+# Determine the maximum number of digits for padding line numbers
+MAX_DIGITS=$(find . -type f -exec file --mime {} \; | grep 'utf-8' | cut -d: -f1 | xargs wc -l | awk '{print $1}' | sort -n | tail -n 2 | head -n 1 | wc -L)
 
 # Find all UTF-8 text files with lines up to the specified maximum and summarize them
 find . -type f -exec file --mime {} \; | grep 'utf-8' | cut -d: -f1 | while read -r file; do
     LINE_COUNT=$(wc -l < "$file")
     if [ "$LINE_COUNT" -le "$MAX_LINES" ]; then
         echo "# $file" >> "$SUMMARY_PATH"
-        awk '{ printf "%d|%s\n", NR, $0 }' "$file" >> "$SUMMARY_PATH"
+        awk -v max_digits="$MAX_DIGITS" '{ printf "%0*d|%s\n", max_digits, NR, $0 }' "$file" >> "$SUMMARY_PATH"
+        echo "" >> "$SUMMARY_PATH"  # Add an empty line after each file's content
     fi
 done
 
